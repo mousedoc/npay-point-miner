@@ -3,7 +3,7 @@ import os
 from telegram import Bot
 
 
-class TelegramHelper:
+class TelegramUtil:
 
     # Telegram setting - 대략적인 형태: 7775956927:AAFxXlFYooWpUmTg9Ljhx9w-u8RAFDvv4OM
     __TELEGRAM_TOKEN = '1234'
@@ -40,8 +40,8 @@ class TelegramHelper:
 
 if __name__ == "__main__":
     # test message 
-    TelegramHelper.send_message('이 메세지는 테스트 메세지 입니다')   
+    TelegramUtil.send_message('이 메세지는 테스트 메세지 입니다')   
 
     # test file
     file_path = os.path.join(os.path.dirname(__file__), 'test_file.zip')
-    TelegramHelper.send_file(file_path, caption="🧾 이건 테스트 파일입니다")
+    TelegramUtil.send_file(file_path, caption="🧾 이건 테스트 파일입니다")
