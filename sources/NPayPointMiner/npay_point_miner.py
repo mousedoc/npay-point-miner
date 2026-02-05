@@ -1,6 +1,7 @@
 import time
 import os
 import random
+import pickle
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
@@ -20,6 +21,9 @@ class NPayPointMiner:
     
     # 인스턴스 생성 시점에 환경 판별하여 미리 설정 - Github Actions 환경에서만 텔레그램 로그 전송 사용
     _use_telegram_log = os.environ.get('GITHUB_ACTIONS') == 'true'
+
+    # 쿠키 경로
+    _cookie_path = 'cookie.txt'
 
     _missions = [
         ("https://point.pay.naver.com/pc/mission-detail?dataType=placement&rank=1&pageKey=benefit_group_pp&rankType=RANDOM_DAILY&sortCompletedAdToLast=true&mssCode=pp", "PlacementList_item__"),
@@ -102,6 +106,10 @@ class NPayPointMiner:
         })
         
     def _login(self):
+        
+        if self.is_github_actions():
+            self.load_cookies()
+        
         if not self._driver: return False
         self.print_log("🔐 네이버 로그인 시도 중...")
         self._driver.get("https://nid.naver.com/nidlogin.login")
@@ -115,11 +123,54 @@ class NPayPointMiner:
             # 로그인 성공 판별 (메인 페이지 이동 시까지 최대 15초 대기)
             wait.until(lambda d: "nid.naver.com" not in d.current_url or d.find_elements(By.CLASS_NAME, "gnb_my_name"))
             self.print_log("✅ 네이버 로그인 완료")
+            
+            if self.is_github_actions() == False:
+                self.save_cookies()
+            
             return True
         except Exception as e:
             self.print_log(f"❌ 로그인 중 오류 발생: {e}")
             self._driver.save_screenshot("debug_exception.png")
             return False
+
+    def save_cookies(self):
+        """현재 브라우저의 쿠키를 파일로 저장합니다."""
+        try:
+            cookies = self._driver.get_cookies()
+            with open(self._cookie_path, "wb") as f:
+                pickle.dump(cookies, f)
+            self.print_log(f"✅ 쿠키 저장 완료: {self._cookie_path} ({len(cookies)}개)")
+        except Exception as e:
+            self.print_log(f"❌ 쿠키 저장 실패: {e}")
+
+    def load_cookies(self):
+        """파일에서 쿠키를 읽어와 현재 브라우저 세션에 주입합니다."""
+        try:
+            with open(self._cookie_path, "rb") as f:
+                cookies = pickle.load(f)
+            
+            # 쿠키를 추가하기 전, 해당 도메인(naver.com)에 먼저 접속해야 합니다.
+            self._driver.get("https://www.naver.com")
+            time.sleep(1)
+
+            for cookie in cookies:
+                # 쿠키 데이터 중 'expiry'가 float인 경우 간혹 에러가 날 수 있어 정수형 변환 처리
+                if 'expiry' in cookie:
+                    cookie['expiry'] = int(cookie['expiry'])
+                self._driver.add_cookie(cookie)
+                
+            self.print_log(f"✅ 쿠키 로드 및 주입 완료 ({len(cookies)}개)")
+            
+            # 주입 후 페이지 새로고침을 해야 로그인 상태가 반영됩니다.
+            self._driver.refresh()
+            return True
+        except FileNotFoundError:
+            self.print_log(f"⚠️ {self._cookie_path} 파일을 찾을 수 없습니다.")
+            return False
+        except Exception as e:
+            self.print_log(f"❌ 쿠키 로드 실패: {e}")
+            return False
+
 
     def _run_single_mission_page(self, url, class_suffix):
         self.print_log(f"🚀 미션 페이지 접속: {url}")
