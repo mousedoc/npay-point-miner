@@ -7,6 +7,7 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import TimeoutException
 from webdriver_manager.chrome import ChromeDriverManager
 from sources.TelegramUtil.telegram_util import TelegramUtil
 from sources.CommonUtil.common_util import CommonUtil
@@ -79,7 +80,8 @@ class NPayPointMiner:
         options.add_experimental_option("excludeSwitches", ["enable-automation"])
         options.add_experimental_option("useAutomationExtension", False)
         options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
-
+        options.page_load_strategy = 'eager'
+        
         if self.is_github_actions():
             options.add_argument("--headless")
             options.add_argument("--no-sandbox")
@@ -199,29 +201,34 @@ class NPayPointMiner:
         self._driver.switch_to.window(self._driver.window_handles[0])
 
     def _click_popup_layer_if_exists(self):
-        """다양한 팝업을 탐색하고 자바스크립트로 클릭하여 펜딩을 방지합니다."""
         popup_types = ["type_has_points", "type_no_points", "type_out_of_period"]
+        
+        # 1. 스크립트 실행 타임아웃을 1초로 제한 (기본값은 무제한에 가까움)
+        self._driver.set_script_timeout(1)
         
         for p_type in popup_types:
             try:
-                # 존재 여부 확인
                 popups = self._driver.find_elements(By.CSS_SELECTOR, f"div[class*='layer_popup'][class*='{p_type}']")
-                
                 if popups and popups[0].is_displayed():
-                    # 버튼 탐색
                     btn = popups[0].find_element(By.CSS_SELECTOR, ".popup_link")
                     
-                    # 💡 탐지 회피를 위한 클릭 전 찰나의 랜덤 대기
-                    time.sleep(random.uniform(0.2, 0.5))
+                    self.print_log(f"🚀 비동기 클릭 강제 실행 ({p_type})")
                     
-                    # 💡 개선 방식: 비동기 클릭 (명령만 내리고 즉시 리턴)
-                    self._driver.execute_script("var el = arguments[0]; setTimeout(function() { el.click(); }, 0);", btn)  
-                  
-                    self.print_log(f"✅ 팝업 처리 완료 ({p_type})")
-                    return True # 처리 성공 시 루프 탈출
-            except Exception:
+                    try:
+                        # 2. 아주 짧은 타임아웃 내에 실행 시도
+                        self._driver.execute_script(
+                            "var el = arguments[0]; setTimeout(function() { el.click(); }, 0);", 
+                            btn
+                        )
+                    except TimeoutException:
+                        # 3. 타임아웃이 나더라도 클릭 명령은 브라우저에 전달되었을 확률이 높으므로 무시
+                        self.print_log("⏳ 타임아웃 발생 (무시하고 진행)")
+                        pass
+                    
+                    return True 
+            except Exception as e:
                 continue
-        return False            
+        return False    
             
     def _ensure_main_window(self):
         while len(self._driver.window_handles) > 1:
