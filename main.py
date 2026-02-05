@@ -1,5 +1,9 @@
+from sources.NPayPointMiner.npay_point_miner import NPayPointMiner
+
+
 def main():
-    print("Hello, Python!")
+    miner = NPayPointMiner()
+    miner.run()
 
 if __name__ == "__main__":
     main()
