@@ -327,9 +327,9 @@ class NPayPointMiner:
 
     def _print_log(self, msg):
         print(msg)
-        if self._use_telegram_log:
-            try: TelegramUtil.send_message(msg)
-            except: pass
+        # if self._use_telegram_log:
+        #     try: TelegramUtil.send_message(msg)
+        #     except: pass
 
     def _report_mining_result(self, before_balance, after_balance):
         """채굴 전후 잔액을 비교하여 결과를 출력하고 전송합니다."""
