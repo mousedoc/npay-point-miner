@@ -26,7 +26,7 @@ python main.py
 ```
 
 # ⚙️ Quickstart - GitHub Actions (now, not work)
-**Automated Naver login via GitHub Actions is currently blocked by CAPTCHA authentication**
+<samp>⚠️ **Automated Naver login via GitHub Actions is currently blocked by CAPTCHA authentication**</samp>
 
 Automate your point mining by setting up GitHub Actions to run daily without keeping your computer on.
 
