@@ -29,14 +29,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
       with:
-        # 'archive' 폴더를 체크아웃에서 제외
-        # .gitattributes 파일에 'archive export-ignore'를 추가하여도 되지만, 
-        # fetch-depth와 sparse-checkout을 사용하여 용량이 큰 폴더를 제외하는 것이 더 확실합니다.
-        # 주의: 이는 전체 리포지토리 히스토리가 아닌, 현재 커밋만 가져옵니다 (shallow clone).
         fetch-depth: 1 
-        sparse-checkout-files: |
-          !archive/**
-          **
           
     - name: Set up Python 3.10
       # setup-python 액션의 최신 버전 (v5) 사용을 권장합니다.
@@ -47,14 +40,9 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        # 린트 도구 (flake8)와 테스트 도구 (pytest)는 이제 필요하지 않을 수 있지만,
-        # .py 파일 실행을 위해 필수 패키지만 남기고 삭제하거나 유지할 수 있습니다.
-        # pip install flake8 pytest # 필요에 따라 주석 해제하거나 삭제하세요
-        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
         
-    - name: Run Python script (github_action.py)
+    - name: Run Python script (main.py)
       run: |
-        # pytest 대신 python github_action.py 명령어를 실행합니다.
         python main.py
 
         
