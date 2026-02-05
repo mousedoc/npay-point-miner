@@ -75,6 +75,7 @@ class NPayPointMiner:
             
     def _create_driver(self):
         options = Options()
+        
         # 자동화 감지 우회 옵션들
         options.add_argument("--disable-blink-features=AutomationControlled")
         options.add_experimental_option("excludeSwitches", ["enable-automation"])
@@ -82,7 +83,8 @@ class NPayPointMiner:
         options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
         options.page_load_strategy = 'eager'
         
-        if self.is_github_actions():
+        if self.is_github_actions():    
+            options.add_argument("--window-size=1920,1080") # 실제 브라우저처럼 크기 지정
             options.add_argument("--headless")
             options.add_argument("--no-sandbox")
             options.add_argument("--disable-dev-shm-usage")
@@ -98,7 +100,7 @@ class NPayPointMiner:
                 })
             """
         })
-
+        
     def _login(self):
         if not self._driver: return False
         self.print_log("🔐 네이버 로그인 시도 중...")
