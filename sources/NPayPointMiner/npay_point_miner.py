@@ -118,6 +118,7 @@ class NPayPointMiner:
             return True
         except Exception as e:
             self.print_log(f"❌ 로그인 중 오류 발생: {e}")
+            self._driver.save_screenshot("debug_exception.png")
             return False
 
     def _run_single_mission_page(self, url, class_suffix):

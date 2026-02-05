@@ -47,3 +47,10 @@ jobs:
         NAVER_PW: ${{ secrets.NAVER_PW }}
       run: python main.py
         
+      # 💡 에러 발생 여부와 상관없이 스크린샷 파일이 있으면 업로드
+    - name: Upload Debug Screenshot
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: debug-screenshots
+        path: "*.png"
