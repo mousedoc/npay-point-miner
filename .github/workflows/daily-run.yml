@@ -1,0 +1,48 @@
+name: Daily Run
+
+on:
+  # main 브랜치에 코드가 푸시될 때 실행되는 트리거
+  # push:
+  #   branches: [ "main" ]
+
+  # pull request 생성 될 때 실행되는 트리거
+  # pull_request:
+  #   branches: [ "main" ]
+
+  # 수동 실행 트리거
+  workflow_dispatch:
+
+  # 정기 실행 트리거
+  schedule:
+    # 한국 시간(KST) 15시 == UTC 06:00
+    # 매일 UTC 06시 00분에 실행되도록 설정
+    - cron: '0 6 * * *' 
+    
+permissions:
+  contents: read
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 1 
+          
+    - name: Set up Python 3.10
+      # setup-python 액션의 최신 버전 (v5) 사용을 권장합니다.
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.10"
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        
+    - name: Run Python script (main.py)
+      run: |
+        python main.py
+
+        
