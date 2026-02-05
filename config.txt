@@ -1,2 +1,2 @@
-ID=your_id
-PW=your_pw
+ID=tkddbs3631
+PW=@Sangyun3317

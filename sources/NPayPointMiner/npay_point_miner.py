@@ -1,5 +1,6 @@
 import time
 import os
+import random
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
@@ -119,6 +120,7 @@ class NPayPointMiner:
         self.print_log(f"🚀 미션 페이지 접속: {url}")
         self._driver.get(url)
         css_selector = f"li[class*='{class_suffix}']"
+        
         try:
             WebDriverWait(self._driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, css_selector)))
         except:
@@ -131,26 +133,96 @@ class NPayPointMiner:
 
         for i in range(total):
             try:
+                time.sleep(1)
+                
+                self._handle_subscription_modal()
+
                 # 갱신 대응: 요소를 매번 새로 찾음
                 target = self._driver.find_elements(By.CSS_SELECTOR, css_selector)[i]
                 self._driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", target)
                 time.sleep(1)
+                
                 target.click()
                 self.print_log(f"👉 [{i+1}/{total}] 클릭 완료")
                 self._handle_new_tab()
+
             except Exception as e:
                 self.print_log(f"⚠️ [{i+1}번] 처리 실패: {e}")
                 self._ensure_main_window()
                 continue
+            
+    def _handle_subscription_modal(self):
+        """구독 유도 모달을 탐색하고 발견 시 '다시 보지 않기' 또는 '닫기'를 클릭합니다."""
+        try:
+            # 모달 존재 여부 확인 (최대한 가벼운 선택자 사용)
+            modals = self._driver.find_elements(By.CSS_SELECTOR, "[class*='SubscriptionAdModal_article__']")
+            if not modals:
+                return
 
+            self.print_log("🔔 구독 유도 모달 발견: 제거 프로세스 시작")
+            
+            # 1순위: '다시 보지 않기' 버튼 (가장 확실한 차단)
+            # 2순위: 우측 상단 'X' 버튼 (ModalFrame-module_button-close__)
+            close_selectors = [
+                "button[class*='SubscriptionAdModal_button-hide__']", 
+                "button[class*='ModalFrame-module_button-close__']"
+            ]
+
+            for selector in close_selectors:
+                btns = self._driver.find_elements(By.CSS_SELECTOR, selector)
+                if btns and btns[0].is_displayed():
+                    self._driver.execute_script("arguments[0].click();", btns[0])
+                    self.print_log(f"✅ 모달 제거 완료 ({selector.split('-')[-1]})")
+                    time.sleep(1)
+                    return
+        except Exception as e:
+            self.print_log(f"⚠️ 모달 처리 중 비정상 에러: {e}")
+            
     def _handle_new_tab(self):
-        time.sleep(2)
-        if len(self._driver.window_handles) > 1:
-            self._driver.switch_to.window(self._driver.window_handles[1])
-            time.sleep(5) 
-            self._driver.close()
-            self._driver.switch_to.window(self._driver.window_handles[0])
+        """새 탭 제어 및 팝업 처리 로직"""
+        # 탭이 생성될 때까지 최소 대기
+        time.sleep(1.5) 
+        
+        if len(self._driver.window_handles) <= 1:
+            return
 
+        # 새 탭으로 전환
+        self._driver.switch_to.window(self._driver.window_handles[1])
+        
+        # 1. 레이어 팝업 처리 (JS 클릭 적용)
+        self._click_popup_layer_if_exists()
+
+        # 2. 클릭 후 아주 짧은 숨 고르기
+        time.sleep(random.uniform(5.5, 7.5))
+        
+        self._driver.close()
+        self._driver.switch_to.window(self._driver.window_handles[0])
+
+    def _click_popup_layer_if_exists(self):
+        """다양한 팝업을 탐색하고 자바스크립트로 클릭하여 펜딩을 방지합니다."""
+        popup_types = ["type_has_points", "type_no_points", "type_out_of_period"]
+        
+        for p_type in popup_types:
+            try:
+                # 존재 여부 확인
+                popups = self._driver.find_elements(By.CSS_SELECTOR, f"div[class*='layer_popup'][class*='{p_type}']")
+                
+                if popups and popups[0].is_displayed():
+                    # 버튼 탐색
+                    btn = popups[0].find_element(By.CSS_SELECTOR, ".popup_link")
+                    
+                    # 💡 탐지 회피를 위한 클릭 전 찰나의 랜덤 대기
+                    time.sleep(random.uniform(0.2, 0.5))
+                    
+                    # 💡 개선 방식: 비동기 클릭 (명령만 내리고 즉시 리턴)
+                    self._driver.execute_script("var el = arguments[0]; setTimeout(function() { el.click(); }, 0);", btn)  
+                  
+                    self.print_log(f"✅ 팝업 처리 완료 ({p_type})")
+                    return True # 처리 성공 시 루프 탈출
+            except Exception:
+                continue
+        return False            
+            
     def _ensure_main_window(self):
         while len(self._driver.window_handles) > 1:
             self._driver.switch_to.window(self._driver.window_handles[-1])
