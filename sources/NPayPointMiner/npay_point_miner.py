@@ -88,12 +88,12 @@ class NPayPointMiner:
         options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
         options.page_load_strategy = 'eager'
         
-        if self.is_github_actions():    
-            options.add_argument("--window-size=1920,1080") # 실제 브라우저처럼 크기 지정
-            options.add_argument("--headless")
-            options.add_argument("--no-sandbox")
-            options.add_argument("--disable-dev-shm-usage")
-            options.add_argument("--disable-gpu")
+        # if self.is_github_actions():    
+        options.add_argument("--window-size=1920,1080") # 실제 브라우저처럼 크기 지정
+        options.add_argument("--headless")
+        options.add_argument("--no-sandbox")
+        options.add_argument("--disable-dev-shm-usage")
+        options.add_argument("--disable-gpu")
 
         self._driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
         
