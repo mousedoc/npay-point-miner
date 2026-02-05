@@ -65,8 +65,8 @@ class NPayPointMiner:
                         line = line.strip()
                         if not line or line.startswith('#') or '=' not in line: continue
                         key, value = line.split('=', 1)
-                        if key.strip().upper() == 'ID': self._naver_id = value.strip()
-                        elif key.strip().upper() == 'PW': self._naver_pw = value.strip()
+                        if key.strip().upper() == 'NAVER_ID': self._naver_id = value.strip()
+                        elif key.strip().upper() == 'NAVER_PW': self._naver_pw = value.strip()
                 
                 # 💡 수정: 유효성 검사 후 마스킹 로그 출력
                 if not self._naver_id or not self._naver_pw:
