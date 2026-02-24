@@ -2,6 +2,9 @@
 Naver Pay Free Point Miner
 Automated daily point collection using Selenium and GitHub Actions.
 
+![output.png](https://github.com/mousedoc/npay-point-miner/.readme/output.png)
+
+
 ---
 
 # 🚀 Quickstart - Local
