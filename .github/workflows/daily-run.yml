@@ -13,10 +13,10 @@ on:
   workflow_dispatch:
 
   # 정기 실행 트리거
-  schedule:
+  # schedule:
     # 한국 시간(KST) 15시 == UTC 06:00
     # 매일 UTC 06시 00분에 실행되도록 설정
-    - cron: '0 6 * * *' 
+    # - cron: '0 6 * * *' 
     
 permissions:
   contents: read

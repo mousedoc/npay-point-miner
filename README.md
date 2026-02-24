@@ -25,7 +25,7 @@ pip install -r requirements.txt
 python main.py
 ```
 
-# ⚙️ Quickstart - GitHub Actions (now, not work)
+# ⚙️ Quickstart - GitHub Actions (currently, not work)
 <samp>⚠️ **Automated Naver login via GitHub Actions is currently blocked by CAPTCHA authentication**</samp>
 
 Automate your point mining by setting up GitHub Actions to run daily without keeping your computer on.
