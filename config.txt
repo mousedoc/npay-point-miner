@@ -1,2 +1,2 @@
-NAVER_ID=tkddbs3631
-NAVER_PW=@Sangyun3317
+NAVER_ID=asdf
+NAVER_PW=qwer
