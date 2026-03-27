@@ -89,7 +89,7 @@ class NPayPointMiner:
         options.page_load_strategy = 'eager'
         
         # if self.is_github_actions():    
-        options.add_argument("--window-size=1920,1080") # 실제 브라우저처럼 크기 지정
+        options.add_argument("--window-size=1280,720") # 실제 브라우저처럼 크기 지정
         options.add_argument("--headless")
         options.add_argument("--no-sandbox")
         options.add_argument("--disable-dev-shm-usage")
@@ -122,6 +122,7 @@ class NPayPointMiner:
             wait.until(EC.element_to_be_clickable((By.ID, "log.login"))).click()
             
             # 로그인 성공 판별 (메인 페이지 이동 시까지 최대 15초 대기)
+            time.sleep(15)
             wait.until(lambda d: "nid.naver.com" not in d.current_url or d.find_elements(By.CLASS_NAME, "gnb_my_name"))
             self._print_log("✅ 네이버 로그인 완료")
             
