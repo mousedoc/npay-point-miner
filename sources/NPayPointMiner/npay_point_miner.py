@@ -85,24 +85,56 @@ class NPayPointMiner:
         options.add_argument("--disable-blink-features=AutomationControlled")
         options.add_experimental_option("excludeSwitches", ["enable-automation"])
         options.add_experimental_option("useAutomationExtension", False)
-        options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
         options.page_load_strategy = 'eager'
         
-        # if self.is_github_actions():    
-        options.add_argument("--window-size=1280,720") # 실제 브라우저처럼 크기 지정
-        options.add_argument("--headless")
-        options.add_argument("--no-sandbox")
-        options.add_argument("--disable-dev-shm-usage")
-        options.add_argument("--disable-gpu")
+        options.add_argument("--window-size=1280,720")
+        options.add_argument("--headless=new")  # 신형 headless — 일반 브라우저와 동일한 렌더링
+
+        if self.is_github_actions():
+            options.add_argument("--no-sandbox")
+            options.add_argument("--disable-dev-shm-usage")
+            options.add_argument("--disable-gpu")
 
         self._driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
         
-        # [우회 핵심] navigator.webdriver 속성 제거
+        # 실제 브라우저의 User-Agent에서 'HeadlessChrome' 문자열 제거
+        original_ua = self._driver.execute_script("return navigator.userAgent")
+        clean_ua = original_ua.replace("HeadlessChrome", "Chrome")
+        self._driver.execute_cdp_cmd("Network.setUserAgentOverride", {"userAgent": clean_ua})
+        
+        # [우회 핵심] 포괄적 브라우저 fingerprint 위장
         self._driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {
             "source": """
-                Object.defineProperty(navigator, 'webdriver', {
-                    get: () => undefined
-                })
+                // navigator.webdriver 제거
+                Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+                
+                // plugins 위장 (headless는 빈 배열)
+                Object.defineProperty(navigator, 'plugins', {
+                    get: () => [1, 2, 3, 4, 5]
+                });
+                
+                // languages 위장
+                Object.defineProperty(navigator, 'languages', {
+                    get: () => ['ko-KR', 'ko', 'en-US', 'en']
+                });
+                
+                // chrome runtime 위장
+                window.chrome = { runtime: {}, loadTimes: function(){}, csi: function(){} };
+                
+                // permissions 위장 (headless 감지 차단)
+                const originalQuery = window.navigator.permissions.query;
+                window.navigator.permissions.query = (parameters) =>
+                    parameters.name === 'notifications'
+                        ? Promise.resolve({ state: Notification.permission })
+                        : originalQuery(parameters);
+                
+                // WebGL 렌더러 위장
+                const getParameter = WebGLRenderingContext.prototype.getParameter;
+                WebGLRenderingContext.prototype.getParameter = function(parameter) {
+                    if (parameter === 37445) return 'Google Inc. (NVIDIA)';
+                    if (parameter === 37446) return 'ANGLE (NVIDIA, NVIDIA GeForce GTX 1650)';
+                    return getParameter.call(this, parameter);
+                };
             """
         })
         
@@ -132,6 +164,11 @@ class NPayPointMiner:
             return True
         except Exception as e:
             self._print_log(f"❌ 로그인 중 오류 발생: {e}")
+            
+            # 로컬 환경: 캡챠 등 수동 처리 기회 제공
+            if not self.is_github_actions():
+                return self._wait_for_manual_login()
+            
             self._driver.save_screenshot("debug_exception.png")
             return False
 
@@ -325,6 +362,48 @@ class NPayPointMiner:
             self._driver.switch_to.window(self._driver.window_handles[-1])
             self._driver.close()
         self._driver.switch_to.window(self._driver.window_handles[0])
+
+    def _wait_for_manual_login(self):
+        """캡챠 등으로 자동 로그인 실패 시, GUI 브라우저를 띄워 수동 로그인 후 쿠키를 저장합니다."""
+        self._print_log("⚠️ 자동 로그인 실패 — GUI 브라우저를 열어 수동 로그인을 진행합니다.")
+        
+        # 1. 기존 headless 드라이버 종료
+        if self._driver:
+            self._driver.quit()
+            self._driver = None
+        
+        # 2. GUI(non-headless) 브라우저 생성
+        options = Options()
+        options.add_argument("--disable-blink-features=AutomationControlled")
+        options.add_experimental_option("excludeSwitches", ["enable-automation"])
+        options.add_experimental_option("useAutomationExtension", False)
+        options.add_argument("--window-size=1280,720")
+        options.page_load_strategy = 'eager'
+        
+        gui_driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+        gui_driver.get("https://nid.naver.com/nidlogin.login")
+        
+        self._print_log("🌐 브라우저가 열렸습니다. 로그인을 완료한 뒤 Enter 키를 누르세요...")
+        input()
+        
+        # 3. 로그인 성공 여부 확인 & 쿠키 저장
+        if "nid.naver.com/nidlogin" not in gui_driver.current_url:
+            self._print_log("✅ 수동 로그인 확인 완료 — 쿠키 저장 중...")
+            cookies = gui_driver.get_cookies()
+            with open(self._cookie_path, "wb") as f:
+                pickle.dump(cookies, f)
+            self._print_log(f"✅ 쿠키 저장 완료 ({len(cookies)}개)")
+            gui_driver.quit()
+            
+            # 4. headless 드라이버 재생성 후 쿠키 주입
+            self._create_driver()
+            self.load_cookies()
+            return True
+        else:
+            self._print_log("❌ 로그인 상태를 확인할 수 없습니다.")
+            gui_driver.quit()
+            self._create_driver()
+            return False
 
     def _print_log(self, msg):
         print(msg)
